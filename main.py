@@ -1,12 +1,13 @@
 import os
 import json
+
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from groq import Groq
 
 app = FastAPI()
 
-# إنشاء عميل Groq باستخدام متغير البيئة
+# قراءة مفتاح Groq من متغير البيئة
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -19,17 +20,15 @@ def call_groq_analysis(
     error_message: str,
 ):
     """
-    يستدعي نموذج Groq ويطلب منه يرجع JSON منظم يحتوي:
-    - جزء مجاني: عنوان + وصف مختصر
-    - جزء كامل: شرح، خطوات، أكواد، نصائح
+    استدعاء Groq لتحليل المشكلة وإرجاع JSON منظم.
     """
 
+    # في حال لم يتم إعداد المفتاح في Render
     if client is None:
-        # لو المفتاح غير موجود، نرجّع نتيجة بسيطة بدل ما نكسر الصفحة
         return {
             "issue_title_ar": "إعداد الذكاء الاصطناعي غير مكتمل.",
-            "preview_one_line_ar": "يبدو أنه لم يتم إعداد مفتاح GROQ_API_KEY في الخادم بعد.",
-            "explanation_simple_ar": "الخادم لا يملك صلاحية الاتصال بخدمة الذكاء الاصطناعي حالياً. راجع إعداد متغير البيئة GROQ_API_KEY في Render.",
+            "preview_one_line_ar": "لم يتم إعداد متغير البيئة GROQ_API_KEY في الخادم.",
+            "explanation_simple_ar": "الخادم لا يملك صلاحية الاتصال بخدمة Groq حالياً. تأكد من إضافة GROQ_API_KEY في إعدادات Render.",
             "explanation_technical_ar": "",
             "step_by_step_ar": [],
             "backend_fix_snippet": "",
@@ -41,8 +40,7 @@ def call_groq_analysis(
     prompt = f"""
 أنت خبير في مشاكل الربط بين الواجهة الأمامية والخلفية (CORS, URLs, Proxies, HTTP errors).
 
-المطلوب: حلّل المشكلة وأرجِع استجابة بصيغة JSON فقط (بدون أي نص آخر)،
-وبالهيكل التالي بالضبط:
+أرجِع استجابة بصيغة JSON فقط (بدون أي نص آخر) وبالهيكل التالي:
 
 {{
   "issue_title_ar": "...",
@@ -56,14 +54,14 @@ def call_groq_analysis(
   "checklist_ar": ["...", "..."]
 }}
 
-قواعد مهمة:
+القواعد:
 - اكتب كل الشرح بالعربية الفصحى المبسطة.
-- اكتب الشرح التقني بالعربية، ويمكنك استخدام مصطلحات إنجليزية فقط عند الحاجة (CORS, origin, headers...).
-- backend_fix_snippet: اكتب كود مناسب لنوع الباك إند المذكور.
-- frontend_fix_snippet: اكتب كود مناسب لنوع الفرونت المذكور (مثل إعداد proxy أو استخدام env).
-- step_by_step_ar: خطوات عملية واضحة يمكن لمبرمج مبتدئ أن يتبعها.
-- common_mistakes_ar: أخطاء شائعة لها علاقة بهذه الحالة.
-- checklist_ar: قائمة تحقق نهائية قبل التجربة مرة أخرى.
+- الشرح التقني بالعربية مع السماح بمصطلحات إنجليزية (CORS, origin, headers...).
+- backend_fix_snippet: كود مناسب لنوع الباك إند.
+- frontend_fix_snippet: كود مناسب لنوع الفرونت (proxy/env إلخ).
+- step_by_step_ar: خطوات عملية واضحة.
+- common_mistakes_ar: أخطاء شائعة مرتبطة بالحالة.
+- checklist_ar: قائمة تحقق نهائية.
 
 بيانات المشكلة:
 
@@ -74,30 +72,32 @@ def call_groq_analysis(
 - Error message: {error_message}
 """
 
-    completion = client.chat.completions.create(
-        model="llama3-70b-8192",  # أو أي موديل مدعوم آخر
-        messages=[
-            {
-                "role": "system",
-                "content": "أنت مساعد خبير يساعد المبرمجين على حل مشاكل الربط بين الواجهة الأمامية والخلفية.",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-        response_format={"type": "json_object"},
-    )
-
-    content = completion.choices[0].message.content
-
     try:
+        completion = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "أنت مساعد خبير يساعد المبرمجين على حل مشاكل الربط بين الواجهة الأمامية والخلفية.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
+
+        content = completion.choices[0].message.content
         data = json.loads(content)
-    except json.JSONDecodeError:
-        # في حال أخطأ النموذج، نرجع شيء بسيط
-        data = {
-            "issue_title_ar": "حدث خطأ في تنسيق استجابة الذكاء الاصطناعي.",
-            "preview_one_line_ar": "تعذر قراءة الاستجابة كـ JSON. حاول مرة أخرى لاحقاً.",
-            "explanation_simple_ar": content,
-            "explanation_technical_ar": "",
+
+    except Exception as e:
+        # نطبع الخطأ في اللوق ونرجع نتيجة مفهومة
+        print("Groq error:", repr(e))
+
+        return {
+            "issue_title_ar": "تعذّر الاتصال بخدمة الذكاء الاصطناعي.",
+            "preview_one_line_ar": "حدث خطأ أثناء محاولة تحليل المشكلة بواسطة Groq.",
+            "explanation_simple_ar": "واجه الخادم مشكلة أثناء التواصل مع خدمة Groq. قد يكون هناك خطأ في المفتاح أو مشكلة مؤقتة في الخدمة.",
+            "explanation_technical_ar": f"Raw error: {repr(e)}",
             "step_by_step_ar": [],
             "backend_fix_snippet": "",
             "frontend_fix_snippet": "",
@@ -105,7 +105,7 @@ def call_groq_analysis(
             "checklist_ar": [],
         }
 
-    # تأكد من وجود كل الحقول، حتى لو كانت ناقصة
+    # ضمان وجود جميع الحقول
     defaults = {
         "issue_title_ar": "",
         "preview_one_line_ar": "",
@@ -187,11 +187,11 @@ def analyze(
         error_message=error_message,
     )
 
-    # جزء مجاني
+    # الجزء المجاني
     issue_title = ai_data["issue_title_ar"]
     preview = ai_data["preview_one_line_ar"]
 
-    # الجزء الكامل (لاحقاً سيكون خلف الدفع)
+    # الجزء الكامل (حالياً معروض – لاحقاً نربطه بالدفع)
     explanation_simple = ai_data["explanation_simple_ar"]
     explanation_technical = ai_data["explanation_technical_ar"]
     steps = ai_data["step_by_step_ar"]
@@ -199,9 +199,6 @@ def analyze(
     frontend_snippet = ai_data["frontend_fix_snippet"]
     common_mistakes = ai_data["common_mistakes_ar"]
     checklist = ai_data["checklist_ar"]
-
-    # الآن نعرض الكل مع فصل واضح بين مجاني ومدفوع
-    # لاحقاً يمكن إخفاء القسم المدفوع حتى تتم عملية الدفع.
 
     steps_html = "".join(f"<li>{s}</li>" for s in steps)
     mistakes_html = "".join(f"<li>{s}</li>" for s in common_mistakes)
@@ -220,7 +217,7 @@ def analyze(
 
         <hr/>
 
-        <h2>الحل الكامل (الجزء المدفوع - معروض الآن للتجربة)</h2>
+        <h2>الحل الكامل (الآن معروض للتجربة – لاحقاً سيكون مدفوع)</h2>
 
         <h3>شرح مبسط</h3>
         <p>{explanation_simple}</p>
