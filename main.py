@@ -7,7 +7,7 @@ from groq import Groq
 
 app = FastAPI()
 
-# قراءة مفتاح Groq من متغير البيئة
+# قراءة مفتاح Groq من متغير البيئة في Render
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -74,7 +74,8 @@ def call_groq_analysis(
 
     try:
         completion = client.chat.completions.create(
-            model="llama3-70b-8192",
+            # الموديل الجديد المقترح من Groq
+            model="llama3-8b-8192",
             messages=[
                 {
                     "role": "system",
@@ -90,13 +91,13 @@ def call_groq_analysis(
         data = json.loads(content)
 
     except Exception as e:
-        # نطبع الخطأ في اللوق ونرجع نتيجة مفهومة
+        # نطبع الخطأ في اللوق ونرجع نتيجة مفهومة بدل 500
         print("Groq error:", repr(e))
 
         return {
             "issue_title_ar": "تعذّر الاتصال بخدمة الذكاء الاصطناعي.",
             "preview_one_line_ar": "حدث خطأ أثناء محاولة تحليل المشكلة بواسطة Groq.",
-            "explanation_simple_ar": "واجه الخادم مشكلة أثناء التواصل مع خدمة Groq. قد يكون هناك خطأ في المفتاح أو مشكلة مؤقتة في الخدمة.",
+            "explanation_simple_ar": "واجه الخادم مشكلة أثناء التواصل مع خدمة Groq. قد يكون هناك خطأ في المفتاح أو في اسم الموديل أو مشكلة مؤقتة في الخدمة.",
             "explanation_technical_ar": f"Raw error: {repr(e)}",
             "step_by_step_ar": [],
             "backend_fix_snippet": "",
