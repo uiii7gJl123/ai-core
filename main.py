@@ -161,8 +161,17 @@ def analyze(
             backend_code = parts.get("BACKEND_CODE") or ""
             frontend_code = parts.get("FRONTEND_CODE") or ""
         except Exception as e:
-            summary = "حدث خطأ أثناء الاتصال بخدمة Groq."
-            steps = f"نص الخطأ الخام:\n{repr(e)}"
+            raw = str(e)
+            if "cloudflare" in raw.lower() or "internal server error" in raw.lower():
+                summary = "يوجد عطل في خدمة Groq أو في الشبكة بينها وبين الخادم."
+                steps = (
+                    "١) لا توجد مشكلة في مدخلاتك أو في كود الأداة.\n"
+                    "٢) أعد إرسال نفس البيانات بعد قليل.\n"
+                    "٣) إذا استمرّ نفس الخطأ لفترة طويلة فغالباً المشكلة من جهة Groq."
+                )
+            else:
+                summary = "حدث خطأ أثناء الاتصال بخدمة Groq."
+                steps = f"التفاصيل التقنية للخطأ:\n{raw}"
             backend_code = ""
             frontend_code = ""
 
