@@ -1,12 +1,14 @@
 import os
+import json
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from groq import Groq
 
 app = FastAPI()
 
-# قراءة مفتاح Groq من متغير البيئة في Render
+# مفتاح Groq من متغيرات البيئة في Render
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_MODEL = "llama-3.1-8b-instant"  # عدّله إذا تغيّر اسم الموديل لاحقاً
 
 
 def build_client():
@@ -15,64 +17,131 @@ def build_client():
     return Groq(api_key=GROQ_API_KEY)
 
 
-def build_prompt(frontend_url, backend_url, frontend_type, backend_type, error_message):
-    return f"""
-أنت خبير في مشاكل الربط بين الواجهة الأمامية والخلفية (CORS, URLs, HTTP errors).
+def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message):
+    """
+    يستدعي Groq ويرجع نتيجة منظمة:
+    {
+      "side": "backend" | "frontend" | "both",
+      "issue_title_ar": "...",
+      "summary_ar": "...",
+      "steps_ar": ["...", "..."],
+      "backend_code": "...",
+      "frontend_code": "..."
+    }
+    """
 
-حلّل المشكلة بناءً على البيانات التالية:
+    client = build_client()
+    if client is None:
+        return {
+            "side": "backend",
+            "issue_title_ar": "إعداد خدمة الذكاء الاصطناعي غير مكتمل.",
+            "summary_ar": "لم يتم إعداد متغير البيئة GROQ_API_KEY في الخادم.",
+            "steps_ar": [
+                "ادخل إلى إعدادات Render الخاصة بالخدمة.",
+                "أضف متغير بيئة باسم GROQ_API_KEY وضع فيه مفتاح Groq الصحيح.",
+                "أعد نشر الخدمة بعد حفظ المتغيرات."
+            ],
+            "backend_code": "",
+            "frontend_code": ""
+        }
 
-- Frontend URL: {frontend_url}
-- Backend URL: {backend_url}
-- Frontend type: {frontend_type}
-- Backend type: {backend_type}
-- Error message: {error_message}
+    # نجمع البيانات في JSON واحد آمن
+    payload = {
+        "frontend_url": frontend_url,
+        "backend_url": backend_url,
+        "frontend_type": frontend_type,
+        "backend_type": backend_type,
+        "error_message": error_message,
+    }
+    payload_json = json.dumps(payload, ensure_ascii=False)
 
-اكتب الإجابة بالعربية، وبالهيكل EXACT التالي (نفس العناوين):
+    prompt = f"""
+أنت خبير في مشاكل الربط بين الواجهة الأمامية والخلفية.
 
-[SUMMARY]
-ملخص قصير جداً للمشكلة في سطر أو سطرين فقط.
+لديك بيانات مشكلة في هذا الكائن JSON:
 
-[STEPS]
-خطوات عملية واضحة لحل المشكلة، كل خطوة في سطر منفصل.
+{payload_json}
 
-[BACKEND_CODE]
-كود مقترح للباك إند (أو تعديل على الكود) يساعد في حل المشكلة.
+مهمتك:
 
-[FRONTEND_CODE]
-كود أو إعدادات مقترحة للفرونت إند (مثل إعداد proxy أو تعديل request).
+1) حدّد بدقة أين الجذر الأساسي للمشكلة:
+   - إذا كان الخطأ ناتج من إعدادات أو كود الباك إند فقط → side = "backend"
+   - إذا كان الخطأ ناتج من إعدادات أو كود الفرونت إند فقط → side = "frontend"
+   - إذا كان هناك أخطاء حقيقية في الاثنين معاً (كل طرف فيه خطأ مستقل) → side = "both"
 
-استخدم نفس العناوين الموضحة بين الأقواس ولا تضف JSON.
+2) أرجع الاستجابة بصيغة JSON فقط، وبدون أي نص خارج JSON، وبالهيكل التالي بالضبط:
+
+{{
+  "side": "backend" | "frontend" | "both",
+  "issue_title_ar": "عنوان قصير بالعربية يصف المشكلة",
+  "summary_ar": "ملخص مبسط بالعربية لغير المتخصص",
+  "steps_ar": [
+    "خطوة 1 بالعربية...",
+    "خطوة 2 بالعربية..."
+  ],
+  "backend_code": "إذا كان side يحتوي backend ضع هنا كود/تعديل الباك إند المناسب، وإلا اتركه نصاً فارغاً \"\".",
+  "frontend_code": "إذا كان side يحتوي frontend ضع هنا كود/تعديل الفرونت إند المناسب، وإلا اتركه نصاً فارغاً \"\"."
+}}
+
+قواعد مهمة:
+- التزم تماماً بالهيكل أعلاه.
+- لا تضف حقولاً إضافية.
+- لا تكتب أي نص خارج JSON.
+- إذا كانت المشكلة backend فقط، اجعل side = "backend" و backend_code يحتوي الكود، و frontend_code = "".
+- إذا كانت المشكلة frontend فقط، اجعل side = "frontend" و frontend_code يحتوي الكود، و backend_code = "".
+- إذا كانت المشكلة حقيقية في الاثنين، اجعل side = "both" وضع كود لكل من backend_code و frontend_code.
 """
 
+    try:
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "أنت مساعد تقني خبير في مشاكل الربط بين الواجهة الأمامية والخلفية وتحديد مصدر المشكلة بدقة."
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            response_format={"type": "json_object"},
+        )
 
-def parse_sections(text: str):
-    sections = {
-        "SUMMARY": "",
-        "STEPS": "",
-        "BACKEND_CODE": "",
-        "FRONTEND_CODE": "",
+        content = completion.choices[0].message.content
+        data = json.loads(content)
+
+    except Exception as e:
+        # أي خطأ من Groq → نرجع نتيجة مفهومة بدلاً من كسر الصفحة
+        err = str(e)
+        return {
+            "side": "backend",
+            "issue_title_ar": "تعذّر الاتصال بخدمة Groq.",
+            "summary_ar": "حدث خطأ أثناء محاولة استخدام خدمة الذكاء الاصطناعي. قد يكون السبب عطلاً مؤقتاً أو مشكلة في الإعدادات.",
+            "steps_ar": [
+                "أعد المحاولة بعد بضع دقائق.",
+                "تحقّق من صلاحية مفتاح GROQ_API_KEY.",
+                "إذا استمر الخطأ، راجع سجلات السيرفر لمعرفة تفاصيله التقنية."
+            ],
+            "backend_code": f"# تفاصيل الخطأ:\n# {err}",
+            "frontend_code": ""
+        }
+
+    # ضمان وجود كل الحقول
+    defaults = {
+        "side": "backend",
+        "issue_title_ar": "",
+        "summary_ar": "",
+        "steps_ar": [],
+        "backend_code": "",
+        "frontend_code": "",
     }
-    current = None
-    lines = text.splitlines()
-    for line in lines:
-        line_stripped = line.strip()
-        if line_stripped == "[SUMMARY]":
-            current = "SUMMARY"
-            continue
-        if line_stripped == "[STEPS]":
-            current = "STEPS"
-            continue
-        if line_stripped == "[BACKEND_CODE]":
-            current = "BACKEND_CODE"
-            continue
-        if line_stripped == "[FRONTEND_CODE]":
-            current = "FRONTEND_CODE"
-            continue
-        if current:
-            sections[current] += line + "\n"
-    for k in sections:
-        sections[k] = sections[k].strip()
-    return sections
+    for k, v in defaults.items():
+        data.setdefault(k, v)
+
+    # تنظيف side
+    if data["side"] not in ("backend", "frontend", "both"):
+        data["side"] = "backend"
+
+    return data
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -85,7 +154,7 @@ def read_root():
       </head>
       <body style="font-family: sans-serif; max-width: 800px; margin: 40px auto;">
         <h1>إصلاح مشاكل الربط بين الواجهة الأمامية والخلفية</h1>
-        <p>ادخل بيانات مشكلتك، وسيتم تحليلها بواسطة الذكاء الاصطناعي.</p>
+        <p>ادخل بيانات مشكلتك، وسيتم تحليلها بواسطة الذكاء الاصطناعي وتحديد ما إذا كان الخلل من الواجهة الأمامية أو الخلفية أو كليهما.</p>
         <form method="post" action="/analyze">
           <label>رابط الواجهة الأمامية (Frontend URL)</label><br/>
           <input type="text" name="frontend_url" style="width:100%; padding:6px;" /><br/><br/>
@@ -132,52 +201,40 @@ def analyze(
     backend_type: str = Form(""),
     error_message: str = Form(""),
 ):
-    client = build_client()
-    if client is None:
-        summary = "مفتاح GROQ_API_KEY غير مضبوط في الخادم."
-        steps = "ادخل إلى إعدادات Render ثم أضف متغير البيئة GROQ_API_KEY بمفتاح Groq الصحيح."
-        backend_code = ""
-        frontend_code = ""
-    else:
-        prompt = build_prompt(
-            frontend_url, backend_url, frontend_type, backend_type, error_message
-        )
-        try:
-            completion = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "أنت مساعد خبير يساعد المبرمجين على حل مشاكل الربط بين الواجهة الأمامية والخلفية.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.3,
-            )
-            content = completion.choices[0].message.content
-            parts = parse_sections(content or "")
-            summary = parts.get("SUMMARY") or "لم يرجع النموذج ملخصاً واضحاً."
-            steps = parts.get("STEPS") or ""
-            backend_code = parts.get("BACKEND_CODE") or ""
-            frontend_code = parts.get("FRONTEND_CODE") or ""
-        except Exception as e:
-            raw = str(e)
-            if "cloudflare" in raw.lower() or "internal server error" in raw.lower():
-                summary = "يوجد عطل في خدمة Groq أو في الشبكة بينها وبين الخادم."
-                steps = (
-                    "١) لا توجد مشكلة في مدخلاتك أو في كود الأداة.\n"
-                    "٢) أعد إرسال نفس البيانات بعد قليل.\n"
-                    "٣) إذا استمرّ نفس الخطأ لفترة طويلة فغالباً المشكلة من جهة Groq."
-                )
-            else:
-                summary = "حدث خطأ أثناء الاتصال بخدمة Groq."
-                steps = f"التفاصيل التقنية للخطأ:\n{raw}"
-            backend_code = ""
-            frontend_code = ""
+    result = call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message)
 
-    steps_html = "<br/>".join(
-        s for s in (steps.splitlines() if steps else []) if s.strip()
-    )
+    side = result["side"]
+    issue_title = result["issue_title_ar"]
+    summary = result["summary_ar"]
+    steps = result["steps_ar"]
+    backend_code = result["backend_code"]
+    frontend_code = result["frontend_code"]
+
+    # نص القرار للمستخدم
+    if side == "backend":
+        decision_text = "القرار: المشكلة الأساسية في الباك إند فقط."
+    elif side == "frontend":
+        decision_text = "القرار: المشكلة الأساسية في الواجهة الأمامية فقط."
+    else:
+        decision_text = "القرار: توجد مشاكل حقيقية في الباك إند والواجهة الأمامية معاً."
+
+    steps_html = "<br/>".join(s for s in steps if s.strip()) if steps else ""
+
+    # نعرض الكود المناسبة حسب side
+    backend_block = ""
+    frontend_block = ""
+
+    if side in ("backend", "both") and backend_code.strip():
+        backend_block = f"""
+        <h4>كود / تعديل الباك إند المقترح</h4>
+        <pre style="background:#272822; color:#f8f8f2; padding:10px; white-space:pre-wrap;">{backend_code}</pre>
+        """
+
+    if side in ("frontend", "both") and frontend_code.strip():
+        frontend_block = f"""
+        <h4>كود / تعديل الواجهة الأمامية المقترح</h4>
+        <pre style="background:#272822; color:#f8f8f2; padding:10px; white-space:pre-wrap;">{frontend_code}</pre>
+        """
 
     return f"""
     <html dir="rtl">
@@ -187,6 +244,9 @@ def analyze(
       </head>
       <body style="font-family: sans-serif; max-width: 900px; margin: 40px auto;">
         <h2>نتيجة التحليل</h2>
+
+        <h3>{issue_title}</h3>
+        <p><strong>{decision_text}</strong></p>
 
         <h3>تشخيص مختصر (مجاني)</h3>
         <p>{summary}</p>
@@ -198,11 +258,8 @@ def analyze(
         <h4>الخطوات المقترحة</h4>
         <p>{steps_html}</p>
 
-        <h4>كود الباك إند المقترح</h4>
-        <pre style="background:#272822; color:#f8f8f2; padding:10px; white-space:pre-wrap;">{backend_code}</pre>
-
-        <h4>كود الواجهة الأمامية / إعدادات الفرونت</h4>
-        <pre style="background:#272822; color:#f8f8f2; padding:10px; white-space:pre-wrap;">{frontend_code}</pre>
+        {backend_block}
+        {frontend_block}
 
         <hr/>
         <h4>بيانات المشكلة التي أدخلتها</h4>
