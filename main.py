@@ -6,10 +6,12 @@ from groq import Groq
 
 app = FastAPI()
 
-# مفتاح Groq من متغيرات البيئة في Render
+# إعدادات Groq من متغيرات البيئة
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = "llama-3.1-8b-instant"  # عدّله إذا تغيّر اسم الموديل لاحقاً
+GROQ_MODEL = "llama-3.1-8b-instant"  # غيّره لاحقاً لو Groq غيّر الأسماء
 
+
+# --------- أدوات مساعدة --------- #
 
 def build_client():
     if not GROQ_API_KEY:
@@ -17,17 +19,73 @@ def build_client():
     return Groq(api_key=GROQ_API_KEY)
 
 
-def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message):
+def classify_side(frontend_url: str, backend_url: str, error_message: str) -> str:
     """
-    يستدعي Groq ويرجع نتيجة منظمة:
-    {
-      "side": "backend" | "frontend" | "both",
-      "issue_title_ar": "...",
-      "summary_ar": "...",
-      "steps_ar": ["...", "..."],
-      "backend_code": "...",
-      "frontend_code": "..."
-    }
+    دالة القواعد (Rules):
+    تحاول تحديد جهة المشكلة من النص فقط.
+
+    ترجع واحدة من:
+    - "backend"
+    - "frontend"
+    - "both"
+    - "uncertain"
+    """
+    msg = (error_message or "").lower()
+
+    backend = False
+    frontend = False
+
+    # 1) مشاكل CORS → غالباً من الباك إند
+    if ("cors" in msg or
+        "access-control-allow-origin" in msg or
+        "cross origin" in msg):
+        backend = True
+
+    # 2) Mixed Content (https يطلب http) → إعدادات سيرفر / نشر → نعتبرها backend غالباً
+    if "mixed content" in msg:
+        backend = True
+
+    # 3) 5xx في السيرفر (500, 502, 503...) → غالباً من الباك إند
+    if "500" in msg or "502" in msg or "503" in msg:
+        backend = True
+
+    # 4) 404 Not Found على مسار API → غالباً من الفرونت (يطلب مسار غلط)
+    if "404" in msg and "not found" in msg:
+        frontend = True
+
+    # 5) 405 Method Not Allowed → غالباً من الفرونت (method غلط: GET بدل POST)
+    if "405" in msg or "method not allowed" in msg:
+        frontend = True
+
+    # 6) failed to fetch بدون كلمة CORS → قد تكون عنوان غلط أو سيرفر مطفأ
+    # نصنّفها هنا كـ "uncertain" حتى نستعين بالذكاء الاصطناعي فيها
+    if "failed to fetch" in msg and "cors" not in msg:
+        # لا نضبط backend/frontend مباشرة، نخليها غامضة
+        pass
+
+    # 7) أخطاء DNS / ENOTFOUND → غالباً Backend / DNS
+    if "enotfound" in msg or "dns" in msg or "econnrefused" in msg:
+        backend = True
+
+    # اتخاذ القرار
+    if backend and frontend:
+        return "both"
+    if backend:
+        return "backend"
+    if frontend:
+        return "frontend"
+
+    # إذا ما قدرنا نحسم → نستعين بالذكاء الاصطناعي
+    return "uncertain"
+
+
+def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message, rule_side: str):
+    """
+    يستدعي Groq ويرجع استجابة منظمة.
+
+    rule_side:
+      - backend / frontend / both  → قرار القواعد
+      - uncertain                  → نخلي Groq يقرر
     """
 
     client = build_client()
@@ -42,34 +100,60 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
                 "أعد نشر الخدمة بعد حفظ المتغيرات."
             ],
             "backend_code": "",
-            "frontend_code": ""
+            "frontend_code": "",
+            "extra_notes_ar": ""
         }
 
-    # نجمع البيانات في JSON واحد آمن
     payload = {
         "frontend_url": frontend_url,
         "backend_url": backend_url,
         "frontend_type": frontend_type,
         "backend_type": backend_type,
         "error_message": error_message,
+        "rule_side": rule_side,
     }
     payload_json = json.dumps(payload, ensure_ascii=False)
+
+    # تعليمات خاصة حسب القواعد
+    if rule_side in ("backend", "frontend", "both"):
+        side_instruction = f"""
+التحليل المبدئي (Rules في الخادم) قرر أن الجهة الأساسية للمشكلة هي:
+fixed_side = "{rule_side}"
+
+يجب عليك الالتزام بهذا القرار وعدم تغييره.
+"""
+    else:
+        side_instruction = """
+لم يستطع الخادم تحديد الجهة بدقة من خلال القواعد.
+مهمتك أن تقرر أنت هل المشكلة في:
+- backend
+- frontend
+- both
+
+واختر side مناسب بناءً على البيانات.
+"""
 
     prompt = f"""
 أنت خبير في مشاكل الربط بين الواجهة الأمامية والخلفية.
 
-لديك بيانات مشكلة في هذا الكائن JSON:
+هذه بيانات المشكلة في JSON:
 
 {payload_json}
 
+{side_instruction}
+
 مهمتك:
 
-1) حدّد بدقة أين الجذر الأساسي للمشكلة:
-   - إذا كان الخطأ ناتج من إعدادات أو كود الباك إند فقط → side = "backend"
-   - إذا كان الخطأ ناتج من إعدادات أو كود الفرونت إند فقط → side = "frontend"
-   - إذا كان هناك أخطاء حقيقية في الاثنين معاً (كل طرف فيه خطأ مستقل) → side = "both"
+1) إذا أعطيتك fixed_side:
+   - استخدم نفس القيمة تماماً في الحقل side ولا تغيّرها.
+   - "backend" يعني أن التعديل العملي في كود الباك إند فقط.
+   - "frontend" يعني أن التعديل العملي في كود الفرونت إند فقط.
+   - "both" يعني أن هناك أخطاء حقيقية في الاثنين.
 
-2) أرجع الاستجابة بصيغة JSON فقط، وبدون أي نص خارج JSON، وبالهيكل التالي بالضبط:
+2) إذا لم أعطك fixed_side (rule_side = "uncertain"):
+   - استخدم خبرتك لتحديد واحدة فقط من القيم: "backend" أو "frontend" أو "both".
+
+3) أرجِع الاستجابة بصيغة JSON فقط، وبدون أي نص خارج JSON، وبالهيكل التالي بالضبط:
 
 {{
   "side": "backend" | "frontend" | "both",
@@ -80,16 +164,17 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
     "خطوة 2 بالعربية..."
   ],
   "backend_code": "إذا كان side يحتوي backend ضع هنا كود/تعديل الباك إند المناسب، وإلا اتركه نصاً فارغاً \"\".",
-  "frontend_code": "إذا كان side يحتوي frontend ضع هنا كود/تعديل الفرونت إند المناسب، وإلا اتركه نصاً فارغاً \"\"."
+  "frontend_code": "إذا كان side يحتوي frontend ضع هنا كود/تعديل الفرونت إند المناسب، وإلا اتركه نصاً فارغاً \"\".",
+  "extra_notes_ar": "ملاحظات إضافية إن لزم الأمر (يمكن أن تكون فارغة)."
 }}
 
 قواعد مهمة:
 - التزم تماماً بالهيكل أعلاه.
 - لا تضف حقولاً إضافية.
 - لا تكتب أي نص خارج JSON.
-- إذا كانت المشكلة backend فقط، اجعل side = "backend" و backend_code يحتوي الكود، و frontend_code = "".
-- إذا كانت المشكلة frontend فقط، اجعل side = "frontend" و frontend_code يحتوي الكود، و backend_code = "".
-- إذا كانت المشكلة حقيقية في الاثنين، اجعل side = "both" وضع كود لكل من backend_code و frontend_code.
+- إذا كان side = "backend": backend_code يجب أن يحتوي كوداً أو مثالاً واضحاً، و frontend_code = "".
+- إذا كان side = "frontend": frontend_code يجب أن يحتوي كوداً أو مثالاً واضحاً، و backend_code = "".
+- إذا كان side = "both": backend_code و frontend_code يجب أن يحتوي كل واحد منهما حلاً واضحاً للجهة الخاصة به.
 """
 
     try:
@@ -98,7 +183,7 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
             messages=[
                 {
                     "role": "system",
-                    "content": "أنت مساعد تقني خبير في مشاكل الربط بين الواجهة الأمامية والخلفية وتحديد مصدر المشكلة بدقة."
+                    "content": "أنت مساعد تقني خبير في مشاكل الربط بين الواجهة الأمامية والخلفية وتحديد مصدر المشكلة بدقة، ثم اقتراح حلول عملية."
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -110,7 +195,6 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
         data = json.loads(content)
 
     except Exception as e:
-        # أي خطأ من Groq → نرجع نتيجة مفهومة بدلاً من كسر الصفحة
         err = str(e)
         return {
             "side": "backend",
@@ -122,7 +206,8 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
                 "إذا استمر الخطأ، راجع سجلات السيرفر لمعرفة تفاصيله التقنية."
             ],
             "backend_code": f"# تفاصيل الخطأ:\n# {err}",
-            "frontend_code": ""
+            "frontend_code": "",
+            "extra_notes_ar": ""
         }
 
     # ضمان وجود كل الحقول
@@ -133,16 +218,27 @@ def call_groq(frontend_url, backend_url, frontend_type, backend_type, error_mess
         "steps_ar": [],
         "backend_code": "",
         "frontend_code": "",
+        "extra_notes_ar": "",
     }
     for k, v in defaults.items():
         data.setdefault(k, v)
 
-    # تنظيف side
+    # تنظيف side من Groq
     if data["side"] not in ("backend", "frontend", "both"):
-        data["side"] = "backend"
+        # لو القواعد حاسمة نلتزم بها
+        if rule_side in ("backend", "frontend", "both"):
+            data["side"] = rule_side
+        else:
+            data["side"] = "backend"
+
+    # إذا القواعد كانت حاسمة (backend/frontend/both) نُلزم النتيجة بنفس الجهة
+    if rule_side in ("backend", "frontend", "both"):
+        data["side"] = rule_side
 
     return data
 
+
+# --------- الواجهات --------- #
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -154,7 +250,7 @@ def read_root():
       </head>
       <body style="font-family: sans-serif; max-width: 800px; margin: 40px auto;">
         <h1>إصلاح مشاكل الربط بين الواجهة الأمامية والخلفية</h1>
-        <p>ادخل بيانات مشكلتك، وسيتم تحليلها بواسطة الذكاء الاصطناعي وتحديد ما إذا كان الخلل من الواجهة الأمامية أو الخلفية أو كليهما.</p>
+        <p>ادخل بيانات مشكلتك، وسيتم تحليلها وتحديد ما إذا كان الخلل من الواجهة الأمامية أو الخلفية أو كليهما.</p>
         <form method="post" action="/analyze">
           <label>رابط الواجهة الأمامية (Frontend URL)</label><br/>
           <input type="text" name="frontend_url" style="width:100%; padding:6px;" /><br/><br/>
@@ -183,7 +279,7 @@ def read_root():
             <option value="Other">غير ذلك</option>
           </select><br/><br/>
 
-          <label>رسالة الخطأ (اختياري)</label><br/>
+          <label>رسالة الخطأ من المتصفح أو من Postman (اختياري)</label><br/>
           <textarea name="error_message" rows="5" style="width:100%; padding:6px;"></textarea><br/><br/>
 
           <button type="submit" style="padding:8px 16px;">حلل المشكلة</button>
@@ -201,7 +297,11 @@ def analyze(
     backend_type: str = Form(""),
     error_message: str = Form(""),
 ):
-    result = call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message)
+    # 1) القرار المبدئي من القواعد
+    rule_side = classify_side(frontend_url, backend_url, error_message)
+
+    # 2) استدعاء Groq مع تمرير قرار القواعد
+    result = call_groq(frontend_url, backend_url, frontend_type, backend_type, error_message, rule_side)
 
     side = result["side"]
     issue_title = result["issue_title_ar"]
@@ -209,18 +309,24 @@ def analyze(
     steps = result["steps_ar"]
     backend_code = result["backend_code"]
     frontend_code = result["frontend_code"]
+    extra_notes = result["extra_notes_ar"]
 
     # نص القرار للمستخدم
     if side == "backend":
-        decision_text = "القرار: المشكلة الأساسية في الباك إند فقط."
+        decision_text = "القرار: المشكلة الأساسية في الباك إند."
     elif side == "frontend":
-        decision_text = "القرار: المشكلة الأساسية في الواجهة الأمامية فقط."
+        decision_text = "القرار: المشكلة الأساسية في الواجهة الأمامية."
     else:
         decision_text = "القرار: توجد مشاكل حقيقية في الباك إند والواجهة الأمامية معاً."
 
+    # وصف مبسط للقرار
+    if rule_side == "uncertain":
+        rule_note = "التصنيف تم بالاعتماد على تحليل الذكاء الاصطناعي لأن رسالة الخطأ غير حاسمة بصورة مباشرة."
+    else:
+        rule_note = f"التصنيف المبدئي تم بواسطة قواعد ثابتة في الخادم (Rules) ثم تم توليد الشرح والكود بناءً عليه. (rule_side = {rule_side})"
+
     steps_html = "<br/>".join(s for s in steps if s.strip()) if steps else ""
 
-    # نعرض الكود المناسبة حسب side
     backend_block = ""
     frontend_block = ""
 
@@ -236,6 +342,8 @@ def analyze(
         <pre style="background:#272822; color:#f8f8f2; padding:10px; white-space:pre-wrap;">{frontend_code}</pre>
         """
 
+    extra_html = f"<p>{extra_notes}</p>" if extra_notes else ""
+
     return f"""
     <html dir="rtl">
       <head>
@@ -247,6 +355,7 @@ def analyze(
 
         <h3>{issue_title}</h3>
         <p><strong>{decision_text}</strong></p>
+        <p style="color: #555;">{rule_note}</p>
 
         <h3>تشخيص مختصر (مجاني)</h3>
         <p>{summary}</p>
@@ -260,6 +369,8 @@ def analyze(
 
         {backend_block}
         {frontend_block}
+
+        {extra_html}
 
         <hr/>
         <h4>بيانات المشكلة التي أدخلتها</h4>
