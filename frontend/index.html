@@ -1,251 +1,168 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Debugger — تشخيص مشاكل الربط</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    :root {
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --input-bg: rgba(15, 23, 42, 0.9);
-      --input-border: rgba(148, 163, 184, 0.45);
-      --button-grad-1: #3b82f6;
-      --button-grad-2: #10b981;
-    }
+    <title>تشخيص مشاكل الربط</title>
 
-    * {
-      box-sizing: border-box;
-    }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Cairo", sans-serif;
+            background: radial-gradient(circle at center, #0e1425, #070b16 70%);
+            color: #fff;
+            text-align: center;
+        }
 
-    /* الخلفية العامة – المحتوى قريب من الأعلى */
-    body {
-      margin: 0;
-      min-height: 100vh;
-      width: 100vw;
-      background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding-top: 32px;
-      padding-bottom: 24px;
-    }
+        .container {
+            max-width: 550px;
+            margin: 80px auto;
+            padding: 0 25px;
+        }
 
-    /* حاوية الصفحة */
-    .page {
-      width: 100%;
-      max-width: 520px;        
-      padding: 0 18px;          
-    }
+        /* عنوان الصفحة */
+        h1 {
+            font-size: 1.9rem;
+            margin-bottom: 8px;
+            font-weight: 800;
+        }
 
-    /* ===== العنوان ===== */
-    h1 {
-      text-align: center;
-      font-size: 24px;
-      margin: 0;
-      font-weight: 700;
-    }
+        h2 {
+            font-size: 1.25rem;
+            color: #cfd6e1;
+            font-weight: 700;
+            margin-bottom: 40px;
+            line-height: 1.7;
+        }
 
-    h2 {
-      text-align: center;
-      font-size: 18px;
-      font-weight: 400;
-      margin-top: 4px;
-      margin-bottom: 26px;
-      color: var(--muted);
-    }
+        label {
+            display: block;
+            text-align: right;
+            margin: 12px 0 6px;
+            font-size: 0.95rem;
+            color: #c7cede;
+            font-weight: 600;
+        }
 
-    /* ===== نموذج الإدخال ===== */
-    form {
-      width: 100%;
-      max-width: 360px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      text-align: right;
-    }
+        input, select, textarea {
+            width: 100%;
+            padding: 15px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.25s;
+        }
 
-    label {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 2px;
-    }
+        input:focus, select:focus, textarea:focus {
+            border-color: #4dd2ff;
+            background: rgba(255,255,255,0.14);
+        }
 
-    input, textarea, select {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--input-border);
-      background: var(--input-bg);
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-      transition: 0.2s;
-    }
+        textarea {
+            height: 130px;
+            resize: vertical;
+        }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #64748b;
-    }
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 16px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #3489ff, #0edb6c);
+            color: #fff;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
-    }
+        button:hover {
+            opacity: 0.92;
+        }
 
-    textarea {
-      resize: none;
-      height: 90px;
-    }
+        @media (max-width: 450px) {
+            .container {
+                margin-top: 55px;
+            }
 
-    /* ===== الزر ===== */
-    button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      background: linear-gradient(90deg, var(--button-grad-1), var(--button-grad-2));
-      color: #f9fafb;
-      margin-top: 8px;
-      transition: 0.2s;
-    }
+            h1 {
+                font-size: 1.65rem;
+            }
 
-    button:active {
-      transform: scale(0.98);
-    }
+            h2 {
+                font-size: 1.05rem;
+            }
 
-    button:hover {
-      opacity: 0.9;
-    }
-
-    #status {
-      margin-top: 6px;
-      font-size: 12px;
-      min-height: 18px;
-      color: var(--muted);
-      text-align: right;
-    }
-
-    #result {
-      margin-top: 16px;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(148, 163, 184, 0.4);
-      font-size: 13px;
-      text-align: right;
-      display: none;
-    }
-
-  </style>
+            input, select, textarea {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <div class="page">
 
-    <!-- العنوان بسطرين كما طلبت -->
-    <h1>تشخيص مشاكل الربط</h1>
-    <h2>بين الواجهة الأمامية والخلفية</h2>
+    <div class="container">
 
-    <form id="debugForm">
-      
-      <div>
+        <h1>تشخيص مشاكل الربط</h1>
+        <h2>تشخيص الربط بين الواجهة الأمامية والخلفية<br>وحل المشاكل تلقائياً</h2>
+
         <label>رابط الواجهة الأمامية (Frontend URL)</label>
-        <input id="frontend_url" placeholder="https://my-frontend.com" />
-      </div>
+        <input type="text" id="frontend" placeholder="https://my-frontend.com">
 
-      <div>
         <label>رابط الواجهة الخلفية (Backend URL / API)</label>
-        <input id="backend_url" placeholder="https://api.myapp.com" />
-      </div>
+        <input type="text" id="backend" placeholder="https://api.myapp.com">
 
-      <div>
         <label>نوع الواجهة الأمامية</label>
-        <select id="frontend_type">
-          <option value="React + Vite">React + Vite</option>
-          <option value="React">React</option>
-          <option value="Next.js">Next.js</option>
-          <option value="Vue">Vue</option>
-          <option value="HTML / JS">HTML / JS</option>
-          <option value="Angular">Angular</option>
-          <option value="Other">غير ذلك</option>
+        <select id="frontendType">
+            <option>React + Vite</option>
+            <option>Next.js</option>
+            <option>Vue.js</option>
+            <option>HTML + JS</option>
         </select>
-      </div>
 
-      <div>
         <label>نوع الواجهة الخلفية</label>
-        <select id="backend_type">
-          <option value="FastAPI">FastAPI</option>
-          <option value="Express">Node.js (Express)</option>
-          <option value="Laravel">Laravel</option>
-          <option value="Django">Django</option>
-          <option value="Other">غير ذلك</option>
+        <select id="backendType">
+            <option>FastAPI</option>
+            <option>Django</option>
+            <option>Laravel</option>
+            <option>Node.js (Express)</option>
         </select>
-      </div>
 
-      <div>
         <label>رسالة الخطأ من المتصفح أو Postman</label>
-        <textarea id="error_message" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
-      </div>
+        <textarea id="errorMessage" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
 
-      <button type="submit">حل المشكلة الآن</button>
-      <div id="status"></div>
-    </form>
+        <button onclick="fixIssue()">حل المشكلة الآن</button>
 
-    <div id="result"></div>
+    </div>
 
-  </div>
+    <script>
+        async function fixIssue() {
+            const payload = {
+                frontend_url: document.getElementById("frontend").value,
+                backend_url: document.getElementById("backend").value,
+                frontend_type: document.getElementById("frontendType").value,
+                backend_type: document.getElementById("backendType").value,
+                error_message: document.getElementById("errorMessage").value
+            };
 
-  <script>
-    const form = document.getElementById("debugForm");
-    const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
+            const response = await fetch("/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      statusEl.textContent = "جاري إرسال البيانات وتحليل المشكلة...";
-      resultEl.style.display = "none";
-      resultEl.textContent = "";
-
-      const payload = {
-        frontend_url: document.getElementById("frontend_url").value,
-        backend_url: document.getElementById("backend_url").value,
-        frontend_type: document.getElementById("frontend_type").value,
-        backend_type: document.getElementById("backend_type").value,
-        error_message: document.getElementById("error_message").value,
-      };
-
-      try {
-        const res = await fetch("/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          statusEl.textContent = "خطأ من الخادم (HTTP " + res.status + ")";
-          return;
+            const result = await response.json();
+            alert(result.result || "تم التحليل.");
         }
-
-        const data = await res.json();
-        statusEl.textContent = "";
-
-        resultEl.innerHTML = "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
-        resultEl.style.display = "block";
-
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "تعذر الاتصال بالخادم.";
-      }
-    });
-  </script>
+    </script>
 
 </body>
 </html>
