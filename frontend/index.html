@@ -1,348 +1,124 @@
-<!doctype html>
-<html dir="rtl" lang="ar">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Debugger — تشخيص مشاكل الربط</title>
-  <style>
-    :root {
-      --bg: #020617;
-      --bg-card: #0b1120;
-      --border: #1f2937;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --primary: #3b82f6;
-      --secondary: #22c55e;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Debugger — تشخيص مشاكل الربط</title>
 
-    * {
-      box-sizing: border-box;
-    }
+    <style>
+        /* === خلفية الصفحة وتوسيط المحتوى بالكامل === */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top, #0f172a, #020617);
+            font-family: "Tahoma", sans-serif;
+            color: white;
+        }
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #1f2937 0, #020617 45%, #000 100%);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-    }
+        /* === صندوق النموذج الرئيسي === */
+        .form-container {
+            width: 95%;
+            max-width: 480px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 28px;
+            border-radius: 18px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.35);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
 
-    .page {
-      width: 100%;
-      max-width: 1100px;
-      padding: 16px;
-    }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 22px;
+            line-height: 34px;
+            color: #e2e8f0;
+        }
 
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
+        label {
+            font-size: 15px;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
 
-    header h1 {
-      margin: 0 0 6px;
-      font-size: 1.4rem;
-    }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 6px;
+            margin-bottom: 14px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: white;
+            font-size: 15px;
+        }
 
-    header p {
-      margin: 0;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
+        textarea {
+            resize: none;
+            height: 90px;
+        }
 
-    .layout {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
+        button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 8px;
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            background: linear-gradient(45deg, #3b82f6, #10b981);
+            color: white;
+            cursor: pointer;
+            transition: 0.25s;
+        }
 
-    .card {
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 16px;
-      padding: 16px 14px;
-      border: 1px solid var(--border);
-      backdrop-filter: blur(20px);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.7);
-    }
-
-    label {
-      font-size: 0.8rem;
-      color: var(--muted);
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    input, select, textarea, button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 9px 11px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: rgba(2, 6, 23, 0.9);
-      color: var(--text);
-      font-size: 0.85rem;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.6);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 100px;
-    }
-
-    button {
-      cursor: pointer;
-      margin-top: 4px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border: none;
-      font-weight: 600;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    .small {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      margin-bottom: 6px;
-    }
-    .badge-backend {
-      background: rgba(59, 130, 246, 0.16);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.7);
-    }
-    .badge-frontend {
-      background: rgba(244, 114, 182, 0.16);
-      color: #fb7185;
-      border: 1px solid rgba(244, 114, 182, 0.7);
-    }
-    .badge-both {
-      background: rgba(234, 179, 8, 0.16);
-      color: #facc15;
-      border: 1px solid rgba(234, 179, 8, 0.7);
-    }
-
-    #result h2 {
-      margin: 4px 0 8px;
-      font-size: 1rem;
-    }
-
-    #result h3 {
-      margin: 10px 0 4px;
-      font-size: 0.9rem;
-    }
-
-    pre {
-      background: #020617;
-      border-radius: 10px;
-      padding: 10px;
-      overflow-x: auto;
-      font-size: 0.75rem;
-      line-height: 1.4;
-    }
-
-    ol {
-      padding-right: 18px;
-      margin: 4px 0 8px;
-      font-size: 0.8rem;
-    }
-
-    #status {
-      min-height: 18px;
-      margin-top: 4px;
-    }
-
-    /* شاشات أكبر: تابلت وما فوق */
-    @media (min-width: 700px) {
-      header h1 {
-        font-size: 1.7rem;
-      }
-      header p {
-        font-size: 0.9rem;
-      }
-      .layout {
-        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
-        align-items: start;
-      }
-      .card {
-        padding: 18px 18px;
-      }
-    }
-
-    /* شاشات كبيرة (ديسكتوب عريض) */
-    @media (min-width: 1024px) {
-      body {
-        padding-top: 10px;
-      }
-      .page {
-        padding: 24px;
-      }
-      header h1 {
-        font-size: 1.9rem;
-      }
-      .card {
-        padding: 20px 22px;
-      }
-    }
-  </style>
+        button:hover {
+            opacity: 0.85;
+        }
+    </style>
 </head>
+
 <body>
-  <div class="page">
-    <header>
-      <h1>AI Debugger — تشخيص مشاكل الربط بين الواجهة الأمامية والخلفية</h1>
-      <p>أدخل روابط مشروعك ورسالة الخطأ، وسيتم تشخيص مصدر المشكلة (Frontend / Backend) مع خطوات الحل.</p>
-    </header>
 
-    <div class="layout">
-      <!-- بطاقة النموذج -->
-      <div class="card">
-        <form id="debug-form">
-          <label>رابط الواجهة الأمامية (Frontend URL)</label>
-          <input type="text" name="frontend_url" placeholder="https://my-frontend.com" />
+    <div class="form-container">
 
-          <label>رابط الواجهة الخلفية / API (Backend URL)</label>
-          <input type="text" name="backend_url" placeholder="https://api.myapp.com" />
+        <h2>تشخيص مشاكل الربط بين الواجهة الأمامية والخلفية — AI Debugger</h2>
 
-          <label>نوع الواجهة الأمامية</label>
-          <select name="frontend_type">
-            <option value="React + Vite">React + Vite</option>
-            <option value="React">React</option>
-            <option value="Vue">Vue</option>
-            <option value="Next.js">Next.js</option>
-            <option value="Angular">Angular</option>
-            <option value="HTML/JS">HTML/JS</option>
-            <option value="Other">غير ذلك</option>
-          </select>
+        <label>رابط الواجهة الأمامية (Frontend URL)</label>
+        <input type="text" placeholder="https://my-frontend.com" id="frontend">
 
-          <label>نوع الواجهة الخلفية</label>
-          <select name="backend_type">
-            <option value="FastAPI">FastAPI</option>
-            <option value="Express">Express</option>
-            <option value="Laravel">Laravel</option>
-            <option value="Django">Django</option>
-            <option value="Node.js">Node.js (عام)</option>
-            <option value="Other">غير ذلك</option>
-          </select>
+        <label>رابط الواجهة الخلفية (Backend URL / API)</label>
+        <input type="text" placeholder="https://api.myapp.com" id="backend">
 
-          <label>رسالة الخطأ من المتصفح أو من Postman</label>
-          <textarea name="error_message" rows="4" placeholder="انسخ رسالة الخطأ هنا..."></textarea>
+        <label>نوع الواجهة الأمامية</label>
+        <select id="frontend_type">
+            <option>React + Vite</option>
+            <option>Next.js</option>
+            <option>Vue</option>
+            <option>HTML + JS</option>
+            <option>Angular</option>
+        </select>
 
-          <button type="submit">حلّل المشكلة الآن</button>
-          <div id="status" class="small"></div>
-        </form>
-      </div>
+        <label>نوع الواجهة الخلفية</label>
+        <select id="backend_type">
+            <option>FastAPI</option>
+            <option>Node.js (Express)</option>
+            <option>Laravel</option>
+            <option>Django</option>
+        </select>
 
-      <!-- بطاقة النتيجة -->
-      <div id="result" class="card" style="display:none;"></div>
+        <label>رسالة الخطأ من المتصفح أو Postman</label>
+        <textarea placeholder="اكتب رسالة الخطأ هنا..." id="error"></textarea>
+
+        <button onclick="alert('سيتم ربط هذه الواجهة مع الباك عند تشغيل التحليل الحقيقي')">
+            حلّ المشكلة الآن
+        </button>
+
     </div>
-  </div>
 
-  <script>
-    const form = document.getElementById("debug-form");
-    const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      statusEl.textContent = "جاري التحليل بواسطة الذكاء الاصطناعي...";
-      resultEl.style.display = "none";
-      resultEl.innerHTML = "";
-
-      const formData = new FormData(form);
-      const plain = Object.fromEntries(formData.entries());
-
-      try {
-        const res = await fetch("/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(plain),
-        });
-
-        if (!res.ok) {
-          statusEl.textContent = "حدث خطأ من الخادم. (HTTP " + res.status + ")";
-          return;
-        }
-
-        const data = await res.json();
-        statusEl.textContent = "";
-
-        const side = data.side || "backend";
-        let badgeClass = "badge-backend";
-        let sideText = "المشكلة في الباك إند";
-
-        if (side === "frontend") {
-          badgeClass = "badge-frontend";
-          sideText = "المشكلة في الواجهة الأمامية";
-        } else if (side === "both") {
-          badgeClass = "badge-both";
-          sideText = "مشاكل في الباك إند والواجهة الأمامية معاً";
-        }
-
-        const stepsHtml = (data.steps_ar || [])
-          .filter(s => s && s.trim() !== "")
-          .map(s => `<li>${s}</li>`)
-          .join("");
-
-        const backendBlock = (side === "backend" || side === "both") && data.backend_code
-          ? `<h3>كود / تعديل الباك إند المقترح</h3><pre>${escapeHtml(data.backend_code)}</pre>`
-          : "";
-
-        const frontendBlock = (side === "frontend" || side === "both") && data.frontend_code
-          ? `<h3>كود / تعديل الواجهة الأمامية المقترح</h3><pre>${escapeHtml(data.frontend_code)}</pre>`
-          : "";
-
-        const extraNotes = data.extra_notes_ar
-          ? `<h3>ملاحظات إضافية</h3><p>${data.extra_notes_ar}</p>`
-          : "";
-
-        const ruleSide = data.rule_side || "uncertain";
-        const ruleNote = ruleSide === "uncertain"
-          ? "التصنيف تم بالاعتماد على تحليل الذكاء الاصطناعي لأن رسالة الخطأ غير حاسمة مباشرة."
-          : `التصنيف المبدئي تم بواسطة قواعد ثابتة في الخادم (rule_side = ${ruleSide}) ثم تم توليد الشرح والكود بناءً عليه.`;
-
-        resultEl.innerHTML = `
-          <span class="badge ${badgeClass}">${sideText}</span>
-          <h2>${data.issue_title_ar || "نتيجة التحليل"}</h2>
-          <p class="small">${ruleNote}</p>
-
-          <h3>ملخص مبسّط</h3>
-          <p>${data.summary_ar || ""}</p>
-
-          <h3>الخطوات المقترحة</h3>
-          <ol>${stepsHtml}</ol>
-
-          ${backendBlock}
-          ${frontendBlock}
-          ${extraNotes}
-        `;
-        resultEl.style.display = "block";
-
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "تعذر الاتصال بالخادم أو خدمة الذكاء الاصطناعي.";
-      }
-    });
-
-    function escapeHtml(str) {
-      if (!str) return "";
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    }
-  </script>
 </body>
 </html>
