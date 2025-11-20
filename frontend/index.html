@@ -1,0 +1,220 @@
+<!doctype html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Debugger — تشخيص مشاكل الربط</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #111827;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 1px solid #1f2937;
+    }
+    label {
+      font-size: 14px;
+      color: #9ca3af;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      background: linear-gradient(135deg, #3b82f6, #22c55e);
+      border: none;
+      font-weight: 600;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .badge-backend {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.6);
+    }
+    .badge-frontend {
+      background: rgba(244, 114, 182, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 114, 182, 0.6);
+    }
+    .badge-both {
+      background: rgba(234, 179, 8, 0.15);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.6);
+    }
+    pre {
+      background: #020617;
+      border-radius: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    .small {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Debugger — تشخيص مشاكل الربط</h1>
+
+  <div class="card">
+    <form id="debug-form">
+      <label>رابط الواجهة الأمامية (Frontend URL)</label>
+      <input type="text" name="frontend_url" placeholder="https://my-frontend.com" />
+
+      <label>رابط الواجهة الخلفية / API (Backend URL)</label>
+      <input type="text" name="backend_url" placeholder="https://api.myapp.com" />
+
+      <label>نوع الواجهة الأمامية</label>
+      <select name="frontend_type">
+        <option value="React + Vite">React + Vite</option>
+        <option value="React">React</option>
+        <option value="Vue">Vue</option>
+        <option value="Next.js">Next.js</option>
+        <option value="Angular">Angular</option>
+        <option value="HTML/JS">HTML/JS</option>
+        <option value="Other">غير ذلك</option>
+      </select>
+
+      <label>نوع الواجهة الخلفية</label>
+      <select name="backend_type">
+        <option value="FastAPI">FastAPI</option>
+        <option value="Express">Express</option>
+        <option value="Laravel">Laravel</option>
+        <option value="Django">Django</option>
+        <option value="Node.js">Node.js (عام)</option>
+        <option value="Other">غير ذلك</option>
+      </select>
+
+      <label>رسالة الخطأ من المتصفح أو من Postman</label>
+      <textarea name="error_message" rows="4" placeholder="انسخ رسالة الخطأ هنا..."></textarea>
+
+      <button type="submit">حلل المشكلة</button>
+      <div id="status" class="small"></div>
+    </form>
+  </div>
+
+  <div id="result" class="card" style="display:none;"></div>
+
+  <script>
+    const form = document.getElementById("debug-form");
+    const statusEl = document.getElementById("status");
+    const resultEl = document.getElementById("result");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      statusEl.textContent = "جاري التحليل بواسطة الذكاء الاصطناعي...";
+      resultEl.style.display = "none";
+      resultEl.innerHTML = "";
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          statusEl.textContent = "حدث خطأ من الخادم. (HTTP " + res.status + ")";
+          return;
+        }
+
+        const data = await res.json();
+        statusEl.textContent = "";
+
+        const side = data.side || "backend";
+        let badgeClass = "badge-backend";
+        let sideText = "المشكلة في الباك إند";
+
+        if (side === "frontend") {
+          badgeClass = "badge-frontend";
+          sideText = "المشكلة في الواجهة الأمامية";
+        } else if (side === "both") {
+          badgeClass = "badge-both";
+          sideText = "مشاكل في الباك إند والواجهة الأمامية معاً";
+        }
+
+        const stepsHtml = (data.steps_ar || [])
+          .filter(s => s && s.trim() !== "")
+          .map(s => `<li>${s}</li>`)
+          .join("");
+
+        const backendBlock = (side === "backend" || side === "both") && data.backend_code
+          ? `<h3>كود / تعديل الباك إند المقترح</h3><pre>${escapeHtml(data.backend_code)}</pre>`
+          : "";
+
+        const frontendBlock = (side === "frontend" || side === "both") && data.frontend_code
+          ? `<h3>كود / تعديل الواجهة الأمامية المقترح</h3><pre>${escapeHtml(data.frontend_code)}</pre>`
+          : "";
+
+        const extraNotes = data.extra_notes_ar
+          ? `<h3>ملاحظات إضافية</h3><p>${data.extra_notes_ar}</p>`
+          : "";
+
+        const ruleSide = data.rule_side || "uncertain";
+        const ruleNote = ruleSide === "uncertain"
+          ? "التصنيف تم بالاعتماد على تحليل الذكاء الاصطناعي لأن رسالة الخطأ غير حاسمة مباشرة."
+          : `التصنيف المبدئي تم بواسطة قواعد ثابتة في الخادم (rule_side = ${ruleSide}) ثم تم توليد الشرح والكود بناءً عليه.`;
+
+        resultEl.innerHTML = `
+          <span class="badge ${badgeClass}">${sideText}</span>
+          <h2>${data.issue_title_ar || "نتيجة التحليل"}</h2>
+          <p class="small">${ruleNote}</p>
+
+          <h3>ملخص مبسّط</h3>
+          <p>${data.summary_ar || ""}</p>
+
+          <h3>الخطوات المقترحة</h3>
+          <ol>${stepsHtml}</ol>
+
+          ${backendBlock}
+          ${frontendBlock}
+          ${extraNotes}
+        `;
+        resultEl.style.display = "block";
+
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "تعذر الاتصال بالخادم أو خدمة الذكاء الاصطناعي.";
+      }
+    });
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+  </script>
+</body>
+</html>
