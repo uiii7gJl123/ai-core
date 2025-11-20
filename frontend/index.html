@@ -1,311 +1,172 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Debugger — تشخيص مشاكل الربط</title>
-  <style>
-    :root {
-      --bg: #020617;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --primary: #3b82f6;
-      --secondary: #22c55e;
-      --border: #1f2937;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Debugger — تشخيص مشاكل الربط</title>
 
-    * {
-      box-sizing: border-box;
-    }
+<style>
+:root {
+  --text: #e2e8f0;
+  --input-bg: rgba(255,255,255,0.05);
+  --input-border: rgba(255,255,255,0.15);
+  --button-grad-1: #3b82f6;
+  --button-grad-2: #10b981;
+}
 
-    /* الخلفية + تخطيط عام */
-    body {
-      margin: 0;
-      min-height: 100vh;
-      width: 100vw;
-      background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      padding: 16px;
-    }
+/* ===== الخلفية العامة وتوسيط النموذج ===== */
+body {
+  margin: 0;
+  min-height: 100vh;
+  width: 100vw;
+  background: radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: center;     /* توسيط عمودي أيضًا */
+  padding: 24px 0;
+}
 
-    .page {
-      width: 100%;
-      max-width: 900px;   /* لسطح المكتب ما يكون بعرض الشاشة بالكامل */
-      margin: 0 auto;
-    }
+/* حاوية الصفحة كاملة */
+.page {
+  width: 100%;
+  max-width: 480px;         /* الحجم العام */
+  padding: 0 16px;          /* مسافة من الحواف */
+  text-align: center;
+}
 
-    header {
-      margin-bottom: 16px;
-      text-align: center;
-    }
+/* النموذج */
+form {
+  width: 100%;
+  max-width: 360px;         /* الحجم الفعلي للنموذج */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-    header h1 {
-      margin: 0 0 4px;
-      font-size: 1.05rem;
-    }
+/* العناوين */
+h1 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
 
-    header p {
-      margin: 0;
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
+p.subtitle {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-bottom: 22px;
+}
 
-    form {
-      width: 100%;
-    }
+/* ===== الحقول ===== */
+label {
+  font-size: 13px;
+  margin-bottom: 4px;
+  text-align: right;
+}
 
-    label {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: 0.3s;
+}
 
-    input, select, textarea {
-      width: 100%;
-      padding: 9px 11px;
-      margin-bottom: 12px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: rgba(2, 6, 23, 0.9);
-      color: var(--text);
-      font-size: 0.9rem;
-    }
+input:focus, textarea:focus, select:focus {
+  border-color: #3b82f6;
+  background: rgba(255,255,255,0.08);
+}
 
-    textarea {
-      resize: vertical;
-      min-height: 90px;
-    }
+textarea {
+  resize: none;
+  height: 90px;
+}
 
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
-    }
+/* ===== الزر ===== */
+button {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(90deg, var(--button-grad-1), var(--button-grad-2));
+  border: none;
+  color: white;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: 0.25s;
+}
 
-    button {
-      width: 100%;
-      padding: 11px;
-      border-radius: 10px;
-      border: none;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #f9fafb;
-      margin-top: 4px;
-      transition: opacity 0.15s, transform 0.08s;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    #status {
-      margin-top: 6px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      min-height: 18px;
-    }
-
-    #result {
-      margin-top: 18px;
-      padding-top: 10px;
-      border-top: 1px dashed #1f2937;
-      font-size: 0.8rem;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 3px 9px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      margin-bottom: 6px;
-    }
-    .badge-backend {
-      background: rgba(59, 130, 246, 0.18);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.8);
-    }
-    .badge-frontend {
-      background: rgba(244, 114, 182, 0.18);
-      color: #fb7185;
-      border: 1px solid rgba(244, 114, 182, 0.8);
-    }
-    .badge-both {
-      background: rgba(234, 179, 8, 0.18);
-      color: #facc15;
-      border: 1px solid rgba(234, 179, 8, 0.8);
-    }
-
-    #result h3 {
-      margin: 6px 0 4px;
-      font-size: 0.86rem;
-    }
-
-    #result p {
-      margin: 0 0 4px;
-    }
-
-    #result ol {
-      margin: 4px 0 4px;
-      padding-right: 16px;
-    }
-
-    pre {
-      background: #020617;
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 0.72rem;
-      overflow-x: auto;
-    }
-
-    @media (min-width: 768px) {
-      body {
-        padding: 24px;
-      }
-      header h1 {
-        font-size: 1.3rem;
-      }
-      header p {
-        font-size: 0.9rem;
-      }
-    }
-  </style>
+button:hover {
+  opacity: 0.9;
+}
+</style>
 </head>
+
 <body>
-  <div class="page">
-    <header>
-      <h1>تشخيص مشاكل الربط بين الواجهة الأمامية والخلفية</h1>
-      <p>AI Debugger — أدخل روابط مشروعك ورسالة الخطأ، وسنحدد هل المشكلة من الـFrontend أو Backend مع خطوات الحل.</p>
-    </header>
+<div class="page">
 
-    <form id="debug-form">
-      <label>(Frontend URL) رابط الواجهة الأمامية</label>
-      <input type="text" name="frontend_url" placeholder="https://my-frontend.com" />
+  <h1>تشخيص مشاكل الربط بين الواجهة الأمامية والخلفية</h1>
+  <p class="subtitle">أدخل روابط مشروعك ورسالة الخطأ، وسيتم تشخيص مصدر المشكلة (Frontend / Backend) مع خطوات الحل.</p>
 
-      <label>(Backend URL / API) رابط الواجهة الخلفية</label>
-      <input type="text" name="backend_url" placeholder="https://api.myapp.com" />
+  <form id="debugForm" onsubmit="event.preventDefault(); analyze();">
 
-      <label>نوع الواجهة الأمامية</label>
-      <select name="frontend_type">
-        <option value="React + Vite">React + Vite</option>
-        <option value="React">React</option>
-        <option value="Next.js">Next.js</option>
-        <option value="Vue">Vue</option>
-        <option value="HTML/JS">HTML + JS</option>
-        <option value="Angular">Angular</option>
-        <option value="Other">غير ذلك</option>
-      </select>
+    <label>رابط الواجهة الأمامية (Frontend URL)</label>
+    <input id="frontend" placeholder="https://my-frontend.com">
 
-      <label>نوع الواجهة الخلفية</label>
-      <select name="backend_type">
-        <option value="FastAPI">FastAPI</option>
-        <option value="Express">Node.js (Express)</option>
-        <option value="Laravel">Laravel</option>
-        <option value="Django">Django</option>
-        <option value="Other">غير ذلك</option>
-      </select>
+    <label>رابط الواجهة الخلفية (Backend URL / API)</label>
+    <input id="backend" placeholder="https://api.myapp.com">
 
-      <label>رسالة الخطأ من المتصفح أو Postman</label>
-      <textarea name="error_message" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
+    <label>نوع الواجهة الأمامية</label>
+    <select id="frontendType">
+      <option>React + Vite</option>
+      <option>Next.js</option>
+      <option>Vue</option>
+      <option>HTML / JS</option>
+      <option>Angular</option>
+    </select>
 
-      <button type="submit">حلّل المشكلة الآن</button>
-      <div id="status"></div>
-    </form>
+    <label>نوع الواجهة الخلفية</label>
+    <select id="backendType">
+      <option>FastAPI</option>
+      <option>Node.js (Express)</option>
+      <option>Laravel</option>
+      <option>Django</option>
+      <option>Spring Boot</option>
+    </select>
 
-    <div id="result" style="display:none;"></div>
-  </div>
+    <label>رسالة الخطأ من المتصفح أو Postman</label>
+    <textarea id="errorMsg" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
 
-  <script>
-    const form = document.getElementById("debug-form");
-    const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
+    <button type="submit">حل المشكلة الآن</button>
+  </form>
+</div>
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      statusEl.textContent = "جاري التحليل بواسطة الذكاء الاصطناعي...";
-      resultEl.style.display = "none";
-      resultEl.innerHTML = "";
+<script>
+async function analyze() {
+  const data = {
+    frontend: document.getElementById("frontend").value,
+    backend: document.getElementById("backend").value,
+    frontendType: document.getElementById("frontendType").value,
+    backendType: document.getElementById("backendType").value,
+    error: document.getElementById("errorMsg").value
+  };
 
-      const formData = new FormData(form);
-      const payload = Object.fromEntries(formData.entries());
+  const response = await fetch("/analyze", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
 
-      try {
-        const res = await fetch("/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+  const text = await response.text();
+  alert(text);
+}
+</script>
 
-        if (!res.ok) {
-          statusEl.textContent = "حدث خطأ من الخادم (HTTP " + res.status + ")";
-          return;
-        }
-
-        const data = await res.json();
-        statusEl.textContent = "";
-
-        const side = data.side || "backend";
-        let badgeClass = "badge-backend";
-        let sideText = "المشكلة في الباك إند";
-
-        if (side === "frontend") {
-          badgeClass = "badge-frontend";
-          sideText = "المشكلة في الواجهة الأمامية";
-        } else if (side === "both") {
-          badgeClass = "badge-both";
-          sideText = "المشكلة في الواجهة الأمامية والخلفية معاً";
-        }
-
-        const steps = (data.steps_ar || [])
-          .filter(x => x && x.trim() !== "")
-          .map(x => `<li>${x}</li>`)
-          .join("");
-
-        const backendCode = data.backend_code
-          ? `<h3>تعديل / كود الباك إند المقترح</h3><pre>${escapeHtml(data.backend_code)}</pre>`
-          : "";
-
-        const frontendCode = data.frontend_code
-          ? `<h3>تعديل / كود الواجهة الأمامية المقترح</h3><pre>${escapeHtml(data.frontend_code)}</pre>`
-          : "";
-
-        const extraNotes = data.extra_notes_ar
-          ? `<h3>ملاحظات إضافية</h3><p>${data.extra_notes_ar}</p>`
-          : "";
-
-        const summary = data.summary_ar || data.short_summary || "";
-        const title = data.issue_title_ar || "نتيجة التحليل";
-
-        resultEl.innerHTML = `
-          <span class="badge ${badgeClass}">${sideText}</span>
-          <h3>${title}</h3>
-          <p>${summary}</p>
-          ${steps ? `<h3>الخطوات المقترحة</h3><ol>${steps}</ol>` : ""}
-          ${backendCode}
-          ${frontendCode}
-          ${extraNotes}
-        `;
-        resultEl.style.display = "block";
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = "تعذر الاتصال بالخادم أو خدمة الذكاء الاصطناعي.";
-      }
-    });
-
-    function escapeHtml(str) {
-      if (!str) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    }
-  </script>
 </body>
 </html>
