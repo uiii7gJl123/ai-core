@@ -1,118 +1,92 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta charset="UTF-8" />
     <title>تشخيص مشاكل الربط</title>
-
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: "Cairo", sans-serif;
-            background: radial-gradient(circle at center, #0e1425, #070b16 70%);
+            font-family: "Tajawal", sans-serif;
+            background: radial-gradient(circle at top, #0f1b33, #05070d);
             color: #fff;
             text-align: center;
         }
 
         .container {
+            width: 100%;
             max-width: 550px;
-            margin: 80px auto;
-            padding: 0 25px;
+            margin: 0 auto;
+            padding: 60px 20px 120px;
         }
 
-        /* عنوان الصفحة */
+        /* العنوان */
         h1 {
-            font-size: 1.9rem;
-            margin-bottom: 8px;
-            font-weight: 800;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
         }
 
         h2 {
-            font-size: 1.25rem;
-            color: #cfd6e1;
-            font-weight: 700;
-            margin-bottom: 40px;
-            line-height: 1.7;
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-top: 0;
+            margin-bottom: 35px;
         }
 
+        /* عنوان الحقول */
         label {
             display: block;
             text-align: right;
-            margin: 12px 0 6px;
-            font-size: 0.95rem;
-            color: #c7cede;
+            font-size: 17px;
+            margin-bottom: 8px;
             font-weight: 600;
+            padding-right: 4px;
         }
 
+        /* الحقول */
         input, select, textarea {
             width: 100%;
             padding: 15px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.18);
             border-radius: 10px;
+            border: 1px solid #3c4a66;
+            background: #101b2d;
             color: #fff;
-            font-size: 1rem;
-            outline: none;
-            transition: 0.25s;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            border-color: #4dd2ff;
-            background: rgba(255,255,255,0.14);
+            font-size: 16px;
+            margin-bottom: 32px; /* ← زيادة المسافة لملء الشاشة */
         }
 
         textarea {
-            height: 130px;
-            resize: vertical;
+            height: 120px;
+            resize: none;
         }
 
-        button {
+        /* زر الحل */
+        .btn {
             width: 100%;
-            margin-top: 25px;
-            padding: 16px;
-            font-size: 1.2rem;
+            padding: 18px;
             border: none;
-            border-radius: 12px;
-            background: linear-gradient(90deg, #3489ff, #0edb6c);
-            color: #fff;
-            cursor: pointer;
-            transition: 0.3s;
+            border-radius: 10px;
+            font-size: 19px;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            cursor: pointer;
+            background: linear-gradient(to left, #1fa2ff, #12d8fa, #06ff8f);
+            color: #fff;
+            margin-top: 10px;
         }
 
-        button:hover {
+        .btn:hover {
             opacity: 0.92;
-        }
-
-        @media (max-width: 450px) {
-            .container {
-                margin-top: 55px;
-            }
-
-            h1 {
-                font-size: 1.65rem;
-            }
-
-            h2 {
-                font-size: 1.05rem;
-            }
-
-            input, select, textarea {
-                font-size: 0.95rem;
-            }
         }
     </style>
 </head>
 
 <body>
-
     <div class="container">
 
         <h1>تشخيص مشاكل الربط</h1>
-        <h2>تشخيص الربط بين الواجهة الأمامية والخلفية<br>وحل المشاكل تلقائياً</h2>
+        <h2>تشخيص الربط بين الواجهة الأمامية والخلفية<br>وحل المشاكل تلقائيًا</h2>
 
         <label>رابط الواجهة الأمامية (Frontend URL)</label>
         <input type="text" id="frontend" placeholder="https://my-frontend.com">
@@ -124,45 +98,25 @@
         <select id="frontendType">
             <option>React + Vite</option>
             <option>Next.js</option>
-            <option>Vue.js</option>
-            <option>HTML + JS</option>
+            <option>Vue</option>
+            <option>Angular</option>
+            <option>HTML Static</option>
         </select>
 
         <label>نوع الواجهة الخلفية</label>
         <select id="backendType">
             <option>FastAPI</option>
-            <option>Django</option>
-            <option>Laravel</option>
             <option>Node.js (Express)</option>
+            <option>Laravel</option>
+            <option>Django</option>
+            <option>Spring Boot</option>
         </select>
 
         <label>رسالة الخطأ من المتصفح أو Postman</label>
-        <textarea id="errorMessage" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
+        <textarea id="error" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
 
-        <button onclick="fixIssue()">حل المشكلة الآن</button>
+        <button class="btn">حل المشكلة الآن</button>
 
     </div>
-
-    <script>
-        async function fixIssue() {
-            const payload = {
-                frontend_url: document.getElementById("frontend").value,
-                backend_url: document.getElementById("backend").value,
-                frontend_type: document.getElementById("frontendType").value,
-                backend_type: document.getElementById("backendType").value,
-                error_message: document.getElementById("errorMessage").value
-            };
-
-            const response = await fetch("/analyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            const result = await response.json();
-            alert(result.result || "تم التحليل.");
-        }
-    </script>
-
 </body>
 </html>
