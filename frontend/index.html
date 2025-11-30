@@ -1,217 +1,4 @@
-<!DOCTYPE <!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تشخيص مشاكل الربط</title>
-
-  <style>
-    :root {
-      --bg-start: #0f172a;
-      --bg-end: #020617;
-      --text-main: #e2e8f0;
-      --text-muted: #94a3b8;
-      --input-bg: rgba(15, 23, 42, 0.95);
-      --input-border: rgba(148, 163, 184, 0.45);
-      --btn-grad-1: #3b82f6;
-      --btn-grad-2: #10b981;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      width: 100vw;
-      background: radial-gradient(circle at top, var(--bg-start) 0, var(--bg-end) 55%, #000 100%);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text-main);
-    }
-
-    .page {
-      max-width: 540px;
-      margin: 32px auto 40px;
-      padding: 0 18px 40px;
-    }
-
-    /* العنوان */
-    h1 {
-      font-size: 24px;
-      font-weight: 700;
-      text-align: center;
-      margin: 0 0 4px;
-    }
-
-    p.subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-align: center;
-      margin: 0 0 28px;
-      line-height: 1.7;
-    }
-
-    form {
-      width: 100%;
-      text-align: right;
-    }
-
-    .field {
-      margin-bottom: 24px; /* ← زيادة الفراغ بين كل خانة والثانية */
-    }
-
-    label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-main);
-      margin-bottom: 6px;
-    }
-
-    input,
-    select,
-    textarea {
-      width: 100%;
-      padding: 12px 13px;
-      border-radius: 10px;
-      border: 1px solid var(--input-border);
-      background: var(--input-bg);
-      color: var(--text-main);
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-
-    input::placeholder,
-    textarea::placeholder {
-      color: #64748b;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
-    }
-
-    textarea {
-      resize: none;
-      height: 95px;
-    }
-
-    button {
-      width: 100%;
-      padding: 13px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      background: linear-gradient(90deg, var(--btn-grad-1), var(--btn-grad-2));
-      color: #f9fafb;
-      margin-top: 4px;
-      transition: 0.2s;
-    }
-
-    button:hover {
-      opacity: 0.93;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    @media (max-width: 420px) {
-      .page {
-        margin-top: 28px;
-        padding: 0 14px 32px;
-      }
-
-      h1 {
-        font-size: 22px;
-      }
-
-      p.subtitle {
-        font-size: 12px;
-        margin-bottom: 24px;
-      }
-
-      .field {
-        margin-bottom: 22px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="page">
-    <h1>تشخيص مشاكل الربط</h1>
-    <p class="subtitle">
-      تشخيص الربط بين الواجهة الأمامية والخلفية باستخدام الذكاء الاصطناعي،
-      مع اقتراح خطوات إصلاح دقيقة للكود.
-    </p>
-
-    <form method="post" action="/analyze">
-      <div class="field">
-        <label for="frontend_url">رابط الواجهة الأمامية (Frontend URL)</label>
-        <input
-          id="frontend_url"
-          name="frontend_url"
-          type="text"
-          placeholder="https://my-frontend.com"
-        />
-      </div>
-
-      <div class="field">
-        <label for="backend_url">رابط الواجهة الخلفية (Backend URL / API)</label>
-        <input
-          id="backend_url"
-          name="backend_url"
-          type="text"
-          placeholder="https://api.myapp.com"
-        />
-      </div>
-
-      <div class="field">
-        <label for="frontend_type">نوع الواجهة الأمامية</label>
-        <select id="frontend_type" name="frontend_type">
-          <option value="React + Vite">React + Vite</option>
-          <option value="React">React</option>
-          <option value="Next.js">Next.js</option>
-          <option value="Vue">Vue</option>
-          <option value="Angular">Angular</option>
-          <option value="HTML / JS">HTML / JS</option>
-          <option value="Other">غير ذلك</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="backend_type">نوع الواجهة الخلفية</label>
-        <select id="backend_type" name="backend_type">
-          <option value="FastAPI">FastAPI</option>
-          <option value="Express">Node.js (Express)</option>
-          <option value="Laravel">Laravel</option>
-          <option value="Django">Django</option>
-          <option value="Spring Boot">Spring Boot</option>
-          <option value="Other">غير ذلك</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="error_message">رسالة الخطأ من المتصفح أو Postman</label>
-        <textarea
-          id="error_message"
-          name="error_message"
-          placeholder="اكتب رسالة الخطأ كاملة هنا..."
-        ></textarea>
-      </div>
-
-      <button type="submit">حل المشكلة الآن</button>
-    </form>
-  </div>
-</body>
-</html>>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -228,11 +15,8 @@
       --button-grad-2: #10b981;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
-    /* خلفية واحدة فقط بدون تكرار */
     body {
       margin: 0;
       min-height: 100vh;
@@ -246,12 +30,8 @@
       padding: 32px 12px 40px;
     }
 
-    .page {
-      width: 100%;
-      max-width: 520px;
-    }
+    .page { width: 100%; max-width: 520px; }
 
-    /* العنوان سطرين */
     h1 {
       font-size: 22px;
       font-weight: 700;
@@ -267,16 +47,8 @@
       line-height: 1.7;
     }
 
-    form {
-      width: 100%;
-      max-width: 420px;
-      margin: 0 auto;
-      text-align: right;
-    }
-
-    .field {
-      margin-bottom: 22px; /* زيادة الفراغ بين الخانات */
-    }
+    form { width: 100%; max-width: 420px; margin: 0 auto; text-align: right; }
+    .field { margin-bottom: 22px; }
 
     label {
       display: block;
@@ -285,9 +57,7 @@
       margin-bottom: 4px;
     }
 
-    input,
-    select,
-    textarea {
+    input, select, textarea {
       width: 100%;
       padding: 11px 12px;
       border-radius: 10px;
@@ -299,21 +69,11 @@
       transition: 0.2s;
     }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #64748b;
-    }
+    textarea { resize: none; height: 90px; }
 
-    input:focus,
-    select:focus,
-    textarea:focus {
+    input:focus, select:focus, textarea:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
-    }
-
-    textarea {
-      resize: none;
-      height: 90px;
     }
 
     button {
@@ -330,32 +90,8 @@
       transition: 0.2s;
     }
 
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    #status {
-      margin-top: 6px;
-      font-size: 12px;
-      min-height: 18px;
-      color: var(--muted);
-      text-align: right;
-    }
-
-    #result {
-      margin-top: 18px;
-      padding-top: 10px;
-      border-top: 1px dashed rgba(148, 163, 184, 0.4);
-      font-size: 13px;
-      text-align: right;
-      display: none;
-      white-space: pre-wrap;
-      direction: ltr; /* لعرض JSON بشكل أوضح */
-    }
+    #status { margin-top: 6px; font-size: 12px; min-height: 18px; color: var(--muted); }
+    #result { margin-top: 18px; padding-top: 10px; border-top: 1px dashed rgba(148, 163, 184, 0.4); font-size: 13px; display: none; white-space: pre-wrap; direction: ltr; }
   </style>
 </head>
 
@@ -363,18 +99,17 @@
   <div class="page">
     <h1>تشخيص مشاكل الربط</h1>
     <p class="subtitle">
-      تشخيص الربط بين الواجهة الأمامية والخلفية باستخدام الذكاء الاصطناعي،
-      مع اقتراح خطوات إصلاح دقيقة للكود.
+      تشخيص الربط بين الواجهة الأمامية والخلفية باستخدام الذكاء الاصطناعي.
     </p>
 
     <form id="debugForm">
       <div class="field">
-        <label>رابط الواجهة الأمامية (Frontend URL)</label>
+        <label>رابط الواجهة الأمامية</label>
         <input id="frontend_url" placeholder="https://my-frontend.com" />
       </div>
 
       <div class="field">
-        <label>رابط الواجهة الخلفية (Backend URL / API)</label>
+        <label>رابط الواجهة الخلفية</label>
         <input id="backend_url" placeholder="https://api.myapp.com" />
       </div>
 
@@ -385,9 +120,8 @@
           <option value="React">React</option>
           <option value="Next.js">Next.js</option>
           <option value="Vue">Vue</option>
-          <option value="HTML / JS">HTML / JS</option>
           <option value="Angular">Angular</option>
-          <option value="Other">غير ذلك</option>
+          <option value="HTML / JS">HTML / JS</option>
         </select>
       </div>
 
@@ -395,19 +129,18 @@
         <label>نوع الواجهة الخلفية</label>
         <select id="backend_type">
           <option value="FastAPI">FastAPI</option>
-          <option value="Express">Node.js (Express)</option>
+          <option value="Express">Express</option>
           <option value="Laravel">Laravel</option>
           <option value="Django">Django</option>
-          <option value="Other">غير ذلك</option>
         </select>
       </div>
 
       <div class="field">
-        <label>رسالة الخطأ من المتصفح أو Postman</label>
-        <textarea id="error_message" placeholder="اكتب رسالة الخطأ كاملة هنا..."></textarea>
+        <label>رسالة الخطأ</label>
+        <textarea id="error_message" placeholder="الخطأ هنا"></textarea>
       </div>
 
-      <button type="submit">حل المشكلة الآن</button>
+      <button type="submit">حل المشكلة</button>
       <div id="status"></div>
     </form>
 
@@ -421,16 +154,15 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      statusEl.textContent = "جاري تحليل المشكلة...";
+      statusEl.textContent = "جاري التحليل...";
       resultEl.style.display = "none";
-      resultEl.textContent = "";
 
       const payload = {
-        frontend_url: document.getElementById("frontend_url").value,
-        backend_url: document.getElementById("backend_url").value,
-        frontend_type: document.getElementById("frontend_type").value,
-        backend_type: document.getElementById("backend_type").value,
-        error_message: document.getElementById("error_message").value,
+        frontend_url: frontend_url.value,
+        backend_url: backend_url.value,
+        frontend_type: frontend_type.value,
+        backend_type: backend_type.value,
+        error_message: error_message.value,
       };
 
       try {
@@ -440,17 +172,11 @@
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) {
-          statusEl.textContent = "خطأ من الخادم (HTTP " + res.status + ")";
-          return;
-        }
-
         const data = await res.json();
         statusEl.textContent = "";
         resultEl.textContent = JSON.stringify(data, null, 2);
         resultEl.style.display = "block";
-      } catch (err) {
-        console.error(err);
+      } catch {
         statusEl.textContent = "تعذر الاتصال بالخادم.";
       }
     });
