@@ -16,7 +16,6 @@
     }
 
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
@@ -31,32 +30,13 @@
     }
 
     .page { width: 100%; max-width: 520px; }
-
-    h1 {
-      font-size: 22px;
-      font-weight: 700;
-      text-align: center;
-      margin: 0 0 4px;
-    }
-
-    p.subtitle {
-      font-size: 13px;
-      color: var(--muted);
-      text-align: center;
-      margin: 0 0 24px;
-      line-height: 1.7;
-    }
+    h1 { font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 4px; }
+    p.subtitle { font-size: 13px; color: var(--muted); text-align: center; margin: 0 0 24px; line-height: 1.7; }
 
     form { width: 100%; max-width: 420px; margin: 0 auto; text-align: right; }
     .field { margin-bottom: 22px; }
 
-    label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
     input, select, textarea {
       width: 100%;
       padding: 11px 12px;
@@ -70,7 +50,6 @@
     }
 
     textarea { resize: none; height: 90px; }
-
     input:focus, select:focus, textarea:focus {
       border-color: #3b82f6;
       box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
@@ -91,16 +70,13 @@
     }
 
     #status { margin-top: 6px; font-size: 12px; min-height: 18px; color: var(--muted); }
-    #result { margin-top: 18px; padding-top: 10px; border-top: 1px dashed rgba(148, 163, 184, 0.4); font-size: 13px; display: none; white-space: pre-wrap; direction: ltr; }
   </style>
 </head>
 
 <body>
   <div class="page">
     <h1>تشخيص مشاكل الربط</h1>
-    <p class="subtitle">
-      تشخيص الربط بين الواجهة الأمامية والخلفية باستخدام الذكاء الاصطناعي.
-    </p>
+    <p class="subtitle">تشخيص الربط بين الواجهة الأمامية والخلفية باستخدام الذكاء الاصطناعي.</p>
 
     <form id="debugForm">
       <div class="field">
@@ -143,39 +119,37 @@
       <button type="submit">حل المشكلة</button>
       <div id="status"></div>
     </form>
-
-    <div id="result"></div>
   </div>
 
   <script>
     const form = document.getElementById("debugForm");
     const statusEl = document.getElementById("status");
-    const resultEl = document.getElementById("result");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       statusEl.textContent = "جاري التحليل...";
-      resultEl.style.display = "none";
 
       const payload = {
         frontend_url: frontend_url.value,
         backend_url: backend_url.value,
         frontend_type: frontend_type.value,
         backend_type: backend_type.value,
-        error_message: error_message.value,
+        error_message: error_message.value
       };
 
       try {
         const res = await fetch("/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload)
         });
 
         const data = await res.json();
         statusEl.textContent = "";
-        resultEl.textContent = JSON.stringify(data, null, 2);
-        resultEl.style.display = "block";
+
+        const encoded = encodeURIComponent(JSON.stringify(data));
+        window.location.href = "/instructions.html?data=" + encoded;
+
       } catch {
         statusEl.textContent = "تعذر الاتصال بالخادم.";
       }
